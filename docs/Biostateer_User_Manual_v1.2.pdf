@@ -1,0 +1,21 @@
+BIOSTATEER™ ENTERPRISE CLINICAL & BIOSTATISTICS INTELLECTUAL PLATFORM
+====================================================================
+VERSION 1.2 USER MANUAL EXPORT ARTIFACT (PDF FORMAT)
+====================================================================
+
+The comprehensive Biostateer™ User Manual v1.2 is fully drafted and maintained in the standard markdown source file:
+- File Location: /docs/Biostateer_User_Manual_v1.2.md
+
+To compile this markdown file into a formatted Adobe PDF document, system administrators or biostatisticians can utilize standard document compilers:
+
+1. COMPILATION VIA PANDOC (Recommended)
+   Run the following terminal commands to export formatted documents:
+   
+   # For PDF Export (Requires LaTeX):
+   pandoc docs/Biostateer_User_Manual_v1.2.md -o docs/Biostateer_User_Manual_v1.2.pdf --pdf-engine=xelatex
+
+2. COMPILATION VIA MICROSOFT WORD
+   Open Microsoft Word, select "Open", and open the markdown source file directly. Word will automatically parse the layout, styling, and equations. Click "Save As" and choose PDF format.
+
+--------------------------------------------------------------------
+© 2026 Dr. Bhupesh Dewan (Owner of Biostateer™). All Rights Reserved.

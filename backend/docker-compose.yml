@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  stats-backend:
+    build: .
+    container_name: biostateer-stats-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ENV=production
+      - LOG_LEVEL=info
+    restart: always

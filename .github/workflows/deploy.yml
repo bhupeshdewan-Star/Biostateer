@@ -1,0 +1,107 @@
+# ====================================================================
+# BIOSTATEER™ VERSION 1.3 - GITHUB ACTIONS AUTOMATED CI/CD PIPELINE
+# TARGETS: Google Cloud Run & Google Container Registry
+# Copyright © 2026 Dr. Bhupesh Dewan. All Rights Reserved.
+# ====================================================================
+
+name: GCP Enterprise Production Deployment
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    name: Build & Verify Validation Asserts
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js v20 Environment
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+
+    - name: Install Frontend Dependencies
+      run: npm ci
+
+    - name: Compile and Build Production Assets
+      run: npm run build
+
+    - name: Setup Python 3.11 Environment
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install Backend Dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+
+    - name: Run Analytical Validation Tests
+      run: |
+        cd backend
+        pytest
+
+  dockerize-and-deploy:
+    name: Push Containers & Deploy to Cloud Run
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    - name: Google Cloud Authentication
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Configure Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Configure Docker Authentication
+      run: gcloud auth configure-docker --quiet
+
+    # Build and Push Backend Docker Image
+    - name: Compile API Docker Container
+      run: |
+        docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/biostateer-api:v1.3.0 ./backend
+        docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/biostateer-api:v1.3.0
+
+    # Build and Push Frontend Docker Image
+    - name: Compile Client Docker Container
+      run: |
+        docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/biostateer-frontend:v1.3.0 .
+        docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/biostateer-frontend:v1.3.0
+
+    # Deploy API to Google Cloud Run
+    - name: Deploy API Engine to Cloud Run
+      run: |
+        gcloud run deploy biostateer-api \
+          --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/biostateer-api:v1.3.0 \
+          --region ${{ secrets.GCP_REGION }} \
+          --platform managed \
+          --allow-unauthenticated \
+          --update-env-vars=ENV=production,DATABASE_URL=${{ secrets.DB_URL_PROD }} \
+          --set-secrets=JWT_SECRET=jwt-secret:latest
+
+    # Deploy Frontend Client to Google Cloud Run
+    - name: Deploy Client to Cloud Run
+      run: |
+        gcloud run deploy biostateer-frontend \
+          --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/biostateer-frontend:v1.3.0 \
+          --region ${{ secrets.GCP_REGION }} \
+          --platform managed \
+          --allow-unauthenticated
